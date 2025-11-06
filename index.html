@@ -28,6 +28,22 @@
     <button onclick="saveNote()">💾 保存</button>
   </div>
 
+  <div id="share-section" style="margin-top: 1em; border-top: 1px solid #ccc; padding-top: 1em;">
+  <h3>🔗 笔记共享</h3>
+
+  <div>
+    <input type="text" id="share-target" placeholder="输入要共享的用户名" />
+    <select id="share-permission">
+      <option value="read">只读</option>
+      <option value="edit">可编辑</option>
+    </select>
+    <button id="share-btn">分享笔记</button>
+  </div>
+
+  <div id="shared-users" style="margin-top: 0.5em;"></div>
+</div>
+
+
   <script>
     const API_BASE = "https://md.vhadx.workers.dev"; // ⚠️ 替换为你的 Worker 地址
     let currentId = null;
@@ -145,7 +161,88 @@
 
     // 自动登录状态
     if (localStorage.token) showApp();
+
+const token = localStorage.getItem("token");
+
+// 获取当前笔记 ID（你可以根据实际逻辑修改）
+const noteId = currentNoteId || "abc123"; 
+
+// 分享按钮事件
+document.getElementById("share-btn").addEventListener("click", async () => {
+  const targetUser = document.getElementById("share-target").value.trim();
+  const permission = document.getElementById("share-permission").value;
+
+  if (!targetUser) {
+    alert("请输入要共享的用户名");
+    return;
+  }
+
+  const res = await fetch(`${API_BASE}/api/share`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer " + token,
+    },
+    body: JSON.stringify({ noteId, targetUser, permission }),
+  });
+
+  const data = await res.json();
+  if (res.ok) {
+    alert("✅ 已共享给 " + targetUser);
+    loadSharedUsers();
+  } else {
+    alert("❌ 分享失败：" + (data.error || res.statusText));
+  }
+});
+
+// 加载共享列表
+async function loadSharedUsers() {
+  const res = await fetch(`${API_BASE}/api/note/${noteId}`, {
+    headers: { Authorization: "Bearer " + token },
+  });
+  if (!res.ok) return;
+
+  const note = await res.json();
+  const container = document.getElementById("shared-users");
+  container.innerHTML = "<h4>已共享用户：</h4>";
+
+  if (note.permissions) {
+    for (const [user, perm] of Object.entries(note.permissions)) {
+      const div = document.createElement("div");
+      div.innerHTML = `
+        👤 ${user}（${perm === "edit" ? "可编辑" : "只读"}）
+        <button onclick="revokeShare('${noteId}', '${user}')">撤销</button>
+      `;
+      container.appendChild(div);
+    }
+  } else {
+    container.innerHTML += "<p>暂无共享用户</p>";
+  }
+}
+
+// 撤销共享
+async function revokeShare(noteId, targetUser) {
+  if (!confirm(`确定要撤销 ${targetUser} 的访问权限吗？`)) return;
+
+  const res = await fetch(`${API_BASE}/api/share/${noteId}/${targetUser}`, {
+    method: "DELETE",
+    headers: { Authorization: "Bearer " + token },
+  });
+
+  if (res.ok) {
+    alert("✅ 已撤销共享");
+    loadSharedUsers();
+  } else {
+    const data = await res.json();
+    alert("❌ 撤销失败：" + (data.error || res.statusText));
+  }
+}
+
+// 初始化时加载共享状态
+loadSharedUsers();
+    
   </script>
 </body>
 </html>
+
 
