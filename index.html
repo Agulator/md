@@ -150,7 +150,7 @@
 const token = localStorage.getItem("token");
 
 // 获取当前笔记 ID（你可以根据实际逻辑修改）
-const noteId = currentNoteId || "abc123"; 
+const noteId = currentId || "abc123"; 
 
 // 分享按钮事件
 document.getElementById("share-btn").addEventListener("click", async () => {
@@ -229,6 +229,7 @@ loadSharedUsers();
   </script>
 </body>
 </html>
+
 
 
 
